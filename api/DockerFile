@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+# Installer curl
+RUN apk add --no-cache curl
+
+COPY package.json package-lock.json ./
+
+RUN npm i
+
+RUN npm i @nestjs/config @nestjs/jwt @nestjs/mapped-types @nestjs/passport @prisma/client prisma @prisma/studio argon2 class-transformer class-validator nodemailer passport-jwt && \
+  npx prisma init
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["/bin/sh", "-c", "npm run start:dev"]

@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-database
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      retries: 5
+      timeout: 5s
+
+  nestjs-app:
+    build:
+      context: ./api
+      dockerfile: DockerFile
+    volumes:
+      - ./api:/usr/src/app
+      - /usr/src/app/node_modules
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ['/bin/sh', '-c', ' npm run start:dev']
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://localhost:3000']
+      interval: 2s
+      retries: 5
+      start_period: 2s
+      timeout: 5s
+
+  nextjs-app:
+    build:
+      context: ./front
+      dockerfile: DockerFile
+    volumes:
+      - ./front:/usr/src/app
+      - /usr/src/app/node_modules
+    env_file:
+      - .env
+    ports:
+      - '3001:3001'
+    depends_on:
+      nestjs-app:
+        condition: service_healthy
+    command: ['npx', 'next', 'dev', '-p 3001']
+    restart: unless-stopped
+
+volumes:
+  mysqldata:
